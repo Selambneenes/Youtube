@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "./Button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -16,13 +16,28 @@ const CategoryPills = ({
   onSelect,
 }: CategoryPillProps) => {
   const [translate, setTranslate] = useState(300);
-  const [isLeftVisible, setIsLeftVisible] = useState(true);
-  const [isRightVisible, setIsRightVisible] = useState(false);
+  const [isLeftVisible, setIsLeftVisible] = useState(false);
+  const [isRightVisible, setIsRightVisible] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null)
 
+  useEffect(() => {
+    if (containerRef.current == null) return
+
+    const observer = new ResizeObserver(entries => {
+      const container = entries[0]?.target
+
+      if (container == null) return
+
+      setIsLeftVisible(translate > 0)
+      setIsRightVisible(translate + container.clientWidth < container.scrollWidth)
+    })
+
+    observer.observe(containerRef.current)
+  }, [categories, translate])
+
   return (
-    <div className="overflow-x-hidden relative">
-      <div ref={containerRef} className="flex whitespace-nowrap gap-3 transition-transform w-[max-content]" style={{transform: `translateX(-${translate}px)`}}>
+    <div ref={containerRef} className="overflow-x-hidden relative">
+      <div className="flex whitespace-nowrap gap-3 transition-transform w-[max-content]" style={{transform: `translateX(-${translate}px)`}}>
         {categories.map((category) => (
           <Button
             key={category}
@@ -62,8 +77,19 @@ const CategoryPills = ({
             variant="ghost"
             className="h-full aspect-square w-auto p-1.5"
             onClick={() => {
-                if (containerRef.current == null) return
-                const newTranslate = translate - tan
+              setTranslate(prevState => {
+                if (containerRef.current == null) {
+                  return prevState
+                }
+                const newTranslate = prevState + TRANSLATE_AMOUNT;
+                const edge = containerRef.current.scrollWidth;
+                const width = containerRef.current.clientWidth;
+
+                if (newTranslate + width >= edge) {
+                  return edge - width
+                }
+                return newTranslate
+              })
             }}
           >
             <ChevronRight />
